@@ -14,7 +14,7 @@ from model import IIC_train
 def parse_args():
     parser = argparse.ArgumentParser(description="Run clustering model training with configurable parameters.")
     parser.add_argument("-batch_size", type=int, default=256, help="Batch size for training")
-    parser.add_argument("-aug_number", type=int, default=5, help="Number of augmentations")
+    parser.add_argument("-aug_number", type=int, default=10, help="Number of augmentations")
     parser.add_argument("-aug_batch_size", type=int, default=256, help="Batch size for augmentation")
     parser.add_argument("-overcluster_period", type=int, default=20, help="Period for overclustering")
     parser.add_argument("-overcluster_ratio", type=float, default=0.5, help="Ratio for overclustering")
