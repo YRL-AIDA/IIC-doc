@@ -23,10 +23,10 @@ def parse_args():
 def main():
     args = parse_args()
     
-    # path = "documents_data.zip"
-    # extract_path = "dataset"
-    # with zipfile.ZipFile(path, 'r') as zip_ref:
-    #     zip_ref.extractall(extract_path)
+    path = "documents_data.zip"
+    extract_path = "dataset"
+    with zipfile.ZipFile(path, 'r') as zip_ref:
+        zip_ref.extractall(extract_path)
 
     dataset_np = RAMAug(
         alb_transforms=alb_transforms,
