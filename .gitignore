@@ -1,1 +1,4 @@
-data/
+raw_data/
+datasets/full_dataset.zip
+__pycache__/
+src/__pycache__
