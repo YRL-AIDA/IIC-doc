@@ -18,13 +18,14 @@ def parse_args():
     parser.add_argument("-aug_batch_size", type=int, default=256, help="Batch size for augmentation")
     parser.add_argument("-overcluster_period", type=int, default=20, help="Period for overclustering")
     parser.add_argument("-overcluster_ratio", type=float, default=0.5, help="Ratio for overclustering")
+    parser.add_argument("-dataset_path", type=str, help="Path to dataset.zip")
     return parser.parse_args()
 
 def main():
     args = parse_args()
     
     path = "documents_data.zip"
-    extract_path = "dataset"
+    extract_path = args.dataset_path
     with zipfile.ZipFile(path, 'r') as zip_ref:
         zip_ref.extractall(extract_path)
 
