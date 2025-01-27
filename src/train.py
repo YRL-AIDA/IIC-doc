@@ -11,23 +11,30 @@ from model import ResNetClusterisator, weight_init
 from loss import IID_loss
 from model import IIC_train
 
+import os
+
+os.environ["NO_ALBUMENTATIONS_UPDATE"]='1'
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Run clustering model training with configurable parameters.")
+    parser.add_argument("-epochs", type=int, default=50, help="number of epochs")
     parser.add_argument("-batch_size", type=int, default=256, help="Batch size for training")
     parser.add_argument("-aug_number", type=int, default=10, help="Number of augmentations")
     parser.add_argument("-aug_batch_size", type=int, default=256, help="Batch size for augmentation")
     parser.add_argument("-overcluster_period", type=int, default=20, help="Period for overclustering")
     parser.add_argument("-overcluster_ratio", type=float, default=0.5, help="Ratio for overclustering")
     parser.add_argument("-dataset_path", type=str, help="Path to dataset.zip")
+    parser.add_argument("-icdar", type=bool, help="choose icdar dataset", default=False)
     return parser.parse_args()
 
 def main():
     args = parse_args()
     
-    path = "documents_data.zip"
-    extract_path = args.dataset_path
-    with zipfile.ZipFile(path, 'r') as zip_ref:
-        zip_ref.extractall(extract_path)
+    if(args.icdar == False):
+        path = args.dataset_path
+        extract_path = "dataset"
+        with zipfile.ZipFile(path, 'r') as zip_ref:
+            zip_ref.extractall(extract_path)
 
     dataset_np = RAMAug(
         alb_transforms=alb_transforms,
@@ -108,7 +115,7 @@ def main():
         dataloader_train,
         optimizer,
         device=device,
-        epochs=30,
+        epochs=args.epochs,
         lamb=1.2,
         overcluster_period=args.overcluster_period,
         overcluster_ratio=args.overcluster_ratio,
