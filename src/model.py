@@ -26,8 +26,8 @@ class ResNetClusterisator(nn.Module):
         self.backbone = nn.Sequential(*modules)
 
         
-        self.cluster_head = nn.Linear(final_features, 3)
-        self.overcluster_head = nn.Linear(final_features, 30)
+        self.cluster_head = nn.Linear(final_features, 16)
+        self.overcluster_head = nn.Linear(final_features, 64)
 
         self.softmax = nn.Softmax(dim=1)
 

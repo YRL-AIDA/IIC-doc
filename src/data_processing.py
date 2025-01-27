@@ -6,7 +6,8 @@ import os
 from PIL import Image 
 import random
 from tqdm import tqdm
-
+from skimage import transform
+import tifffile as tiff
 
 alb_transforms = A.Compose(
     [
@@ -28,12 +29,19 @@ class AlbDataset(Dataset):
         self._scan_directory()
 
     def _scan_directory(self):
-        for root, dirs, files in os.walk(self.data_dir):
-            for file in files:
-                if file.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff')):
-                    self.image_files.append(os.path.join(root, file))
-                    label = int(os.path.basename(root))
-                    self.labels.append(label)
+        images = self.data_dir+'/labels/microtest.txt'
+        files = open(images, 'r').readlines()
+        for file in files:
+            row = file.split(" ") 
+            img_path = row[0]
+            label = row[1]
+
+            self.labels.append(int(label))
+            
+            self.image_files.append(self.data_dir+'/images/'+img_path)
+            
+            print(self.data_dir+'images/'+img_path)
+
 
     def set_transforms(self, transforms):
         self.alb_transforms = transforms
@@ -43,26 +51,33 @@ class AlbDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.image_files[idx]
-        image = Image.open(image_path).convert("RGB")
+        image = tiff.imread(image_path)
+
+        resized_image = transform.resize(image, (1000, 750))
+
+        resized_image = resized_image.astype(np.float32)  
+        if resized_image.max() > 1.0:  
+            resized_image = resized_image / 255.0
+
         label = self.labels[idx]
 
-        image_np = np.array(image)
+        image_np = np.array(resized_image)
 
         if self.alb_transforms is not None:
             image_alb = self.alb_transforms(image=image_np)["image"]
             return {"original": image_np, "augmented": image_alb, "label": label}
         else:
-                return {"original": image_np, "label": label}
-
+            return {"original": image_np, "label": label}
+    
 def stratified_split(original_dataset, train_size, label_key="label"):
     """
-    Разделяет общий датасет PyTorch на основе стратифицированного метода.
+    Разделяет датасет PyTorch на основе стратифицированного метода.
     Основан на функции sklearn.model_selection.train_test_split.
-    Выходные наборы данных не содержат данных, но ссылаются на определенные индексы в исходном наборе данных.
+    Выходные наборы данных не содержат данных, но ссылаются на индексы в исходном наборе данных.
 
     Параметры
     ----------
-    original_dataset : torch.utils.data.dataset.Dataset или подобный
+    original_dataset : torch.utils.data.dataset.Dataset 
         Исходный датасет, который нужно разделить.
     train_size : float
         Доля данных, которая попадет в обучающий (первый возвращаемый) набор данных.
@@ -132,8 +147,8 @@ def create_dataset_arrays(
     print(np.array(dataloader).shape)
 
     print("Fetching original dataset...", end=" ")
-    originals_array = next(iter(dataloader))["original"].numpy()
-    labels_array = next(iter(dataloader))["label"].numpy()
+    originals_array = np.array(next(iter(dataloader))["original"])
+    labels_array = np.array(next(iter(dataloader))["label"])
     print("Done!")
 
     dataset_alb.set_transforms(alb_transforms)

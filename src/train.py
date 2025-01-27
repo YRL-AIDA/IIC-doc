@@ -29,17 +29,20 @@ def parse_args():
 
 def main():
     args = parse_args()
-    
+    dataset_path = args.dataset_path
     if(args.icdar == False):
-        path = args.dataset_path
+        
         extract_path = "dataset"
-        with zipfile.ZipFile(path, 'r') as zip_ref:
+        with zipfile.ZipFile(dataset_path, 'r') as zip_ref:
             zip_ref.extractall(extract_path)
+
+    if(args.icdar == True):
+        labels_path = f'{dataset_path}\\labels\\train.txt'
 
     dataset_np = RAMAug(
         alb_transforms=alb_transforms,
         aug_number=args.aug_number,
-        target_dir="dataset",
+        target_dir=args.dataset_path,
         aug_batch_size=args.aug_batch_size,
         aug_num_workers=1,
     )
