@@ -30,8 +30,12 @@ def parse_args():
 def main():
     args = parse_args()
     dataset_path = args.dataset_path
+
+    if not os.path.exists('../last_train'):
+        os.makedirs("../last_train")
+
     if(args.icdar == False):
-        
+    
         extract_path = "dataset"
         with zipfile.ZipFile(dataset_path, 'r') as zip_ref:
             zip_ref.extractall(extract_path)

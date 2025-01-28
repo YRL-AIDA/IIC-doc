@@ -2,7 +2,7 @@
 from IPython.display import clear_output
 import matplotlib.pyplot as plt
 
-def print_while_trainig(epochs_list, loss_history, loss_history_overclustering):
+def print_while_trainig(epochs_list, loss_history, loss_history_overclustering, save_to_jpg=False):
     """
     Выводит значения потерь и потерь от перекластеризации
 
@@ -31,4 +31,8 @@ def print_while_trainig(epochs_list, loss_history, loss_history_overclustering):
     )
     ax2.legend()
     ax2.grid()
-    plt.show()
+    if(save_to_jpg==False):
+        plt.show()
+    if(save_to_jpg==True):
+        plt.savefig('../last_train/history.jpg')
+    

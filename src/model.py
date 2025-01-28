@@ -5,7 +5,7 @@ from torchvision import models
 import torch
 from tqdm import tqdm
 from loss import IID_loss, evaluate
-
+import os
 from utils import print_while_trainig
 
 
@@ -95,17 +95,20 @@ def IIC_train(
     optimizer,
     epochs=100,
     device=torch.device("cpu"),
-    eval_every=5,
+    eval_every=2,
     lamb=1.0,
     overcluster_period=20,
     overcluster_ratio=0.5,
 ):
     """Цикл обучения IIC"""
+    epochs_list = []
+    loss_history = []
+    loss_history_overclustering = []
 
     best_cluster_loss = float("inf")
 
     # Открываем файл для записи истории обучения
-    with open("last_train.txt", "w") as log_file:
+    with open("../last_train/train.txt", "w") as log_file:
         for epoch in range(epochs):
             model.train()
             overclustering = choose_clustering_regime(
@@ -147,9 +150,28 @@ def IIC_train(
             log_file.write(f"epoch#{epoch + 1} -- loss = {avg_loss:.6f}\n")
             log_file.flush()  # Немедленно записываем данные в файл
 
+            if (epoch + 1) % eval_every == 0:
+
+                # Computing eval losses
+                loss_eval = evaluate(
+                    model, dataloader, overclustering=False, lamb=lamb, device=device
+                )
+                loss_eval_overclustering = evaluate(
+                    model, dataloader, overclustering=True, lamb=lamb, device=device
+                )
+
+                loss_history.append(loss_eval)
+                loss_history_overclustering.append(loss_eval_overclustering)
+                epochs_list.append(epoch)
+
+            
+
+
             # Сохранение модели при улучшении наилучшей потери
             if avg_loss < best_cluster_loss:
                 best_cluster_loss = avg_loss
-                torch.save(model.state_dict(), "best_loss_model")
+                torch.save(model.state_dict(), "../last_train/best_loss_model")
+
+            print_while_trainig(epochs_list, loss_history, loss_history_overclustering, save_to_jpg=True)
 
             pbar.close()
