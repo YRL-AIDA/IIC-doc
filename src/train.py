@@ -59,7 +59,7 @@ def main():
     resnet = models.resnet18(pretrained=False)
     modules_to_keep = list(resnet.children())[:-2]
     modules_to_keep[0] = nn.Conv2d(
-        3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
+        1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
     )
 
     modules_to_keep.append(nn.Flatten())
