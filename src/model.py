@@ -15,24 +15,24 @@ class ResNetClusterisator(nn.Module):
     def __init__(self):
         super(ResNetClusterisator, self).__init__()
         # число выходов, посчитанное заранее
-        final_features = 25088
+        final_features = 393216
 
         resnet = models.resnet18(pretrained=False)
         modules = list(resnet.children())[:-2]
         modules[0] = nn.Conv2d(
-            3, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
+            1, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False
         )
         modules.append(nn.Flatten())
         self.backbone = nn.Sequential(*modules)
 
         
         self.cluster_head = nn.Linear(final_features, 16)
-        self.overcluster_head = nn.Linear(final_features, 64)
+        self.overcluster_head = nn.Linear(final_features, 160)
 
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x, overclustering=False):
-        """Прямой запуск. Может работать как в режиме кластеризации, так и в режиме перекластеризации.
+        """Прямой проход. Может работать как в режиме кластеризации, так и в режиме перекластеризации.
 
         Параметры
         ----------

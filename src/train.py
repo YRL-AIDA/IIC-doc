@@ -66,12 +66,12 @@ def main():
     backbone = nn.Sequential(*modules_to_keep)
 
     batch = next(iter(dataloader_train))["original"]
-    batch = batch[0:3]
+    batch = batch[0:6]
 
     print("Batch shape:", batch.shape)
     print("Output shape:", backbone(batch).shape)
 
-    final_features = 25088
+    final_features = 393216
     cluster_head = nn.Linear(final_features, 3)
     overcluster_head = nn.Linear(final_features, 15)
 
