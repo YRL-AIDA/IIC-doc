@@ -1,0 +1,12 @@
+{
+  "epochs": 50,
+  "batch_size": 2,
+  "aug_number": 1,
+  "aug_batch_size": 16,
+  "overcluster_period": 20,
+  "overcluster_ratio": 0.5,
+  "labels_path": "A:\\rvl-cdip.tar\\rvl-cdip\\labels\\microtest.txt",
+  "images_path": "A:\\rvl-cdip.tar\\rvl-cdip\\images\\",
+  "aug_num_workers": 1,
+  "class_num": 16
+}

@@ -12,10 +12,10 @@ from utils import print_while_trainig
 class ResNetClusterisator(nn.Module):
     """Кластеризатор для IIC на основе основы ResNet18"""
 
-    def __init__(self):
+    def __init__(self, class_num, final_features):
         super(ResNetClusterisator, self).__init__()
-        # число выходов, посчитанное заранее
-        final_features = 393216
+        self.class_num = class_num
+        self.final_features = final_features # число выходов, посчитанное заранее
 
         resnet = models.resnet18(pretrained=False)
         modules = list(resnet.children())[:-2]
@@ -26,8 +26,8 @@ class ResNetClusterisator(nn.Module):
         self.backbone = nn.Sequential(*modules)
 
         
-        self.cluster_head = nn.Linear(final_features, 16)
-        self.overcluster_head = nn.Linear(final_features, 160)
+        self.cluster_head = nn.Linear(final_features, class_num)
+        self.overcluster_head = nn.Linear(final_features, class_num*10)
 
         self.softmax = nn.Softmax(dim=1)
 
@@ -95,7 +95,7 @@ def IIC_train(
     optimizer,
     epochs=100,
     device=torch.device("cpu"),
-    eval_every=2,
+    eval_every=5,
     lamb=1.0,
     overcluster_period=20,
     overcluster_ratio=0.5,

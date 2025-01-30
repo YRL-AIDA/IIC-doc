@@ -1,6 +1,7 @@
 
 from IPython.display import clear_output
 import matplotlib.pyplot as plt
+import json
 
 def print_while_trainig(epochs_list, loss_history, loss_history_overclustering, save_to_jpg=False):
     """
@@ -35,4 +36,9 @@ def print_while_trainig(epochs_list, loss_history, loss_history_overclustering, 
         plt.show()
     if(save_to_jpg==True):
         plt.savefig('../last_train/history.jpg')
-    
+
+
+def load_config(config_path):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    return config

@@ -21,16 +21,17 @@ alb_transforms = A.Compose(
 
 
 class AlbDataset(Dataset):
-    def __init__(self, data_dir, alb_transforms=None):
-        self.data_dir = data_dir
+    def __init__(self, labels_path, images_path, alb_transforms=None):
+        self.labels_path = labels_path
+        self.images_path = images_path
         self.alb_transforms = alb_transforms
         self.image_files = []
         self.labels = []
         self._scan_directory()
 
     def _scan_directory(self):
-        images = self.data_dir+'/labels/microtest.txt'
-        files = open(images, 'r').readlines()
+        labels = self.labels_path
+        files = open(labels, 'r').readlines()
         for file in files:
             row = file.split(" ") 
             img_path = row[0]
@@ -38,9 +39,9 @@ class AlbDataset(Dataset):
 
             self.labels.append(int(label))
             
-            self.image_files.append(self.data_dir+'/images/'+img_path)
+            self.image_files.append(self.images_path+img_path)
             
-            print(self.data_dir+'images/'+img_path)
+            print(self.images_path+'img_path')
 
 
     def set_transforms(self, transforms):
@@ -136,11 +137,11 @@ class startifiedAgentDataset(Dataset):
         return self.original_dataset[original_idx]
     
 def create_dataset_arrays(
-    alb_transforms=None, aug_number=1, target_dir=".", batch_size=256, num_workers=1
+    alb_transforms=None, aug_number=1, labels_path='.', images_path='.', batch_size=256, num_workers=1
 ):
 
 
-    dataset_alb = AlbDataset(target_dir)
+    dataset_alb = AlbDataset(labels_path=labels_path, images_path=images_path)
     dataloader = DataLoader(
         dataset_alb, batch_size=len(dataset_alb), shuffle=False, num_workers=num_workers
     )
@@ -185,7 +186,8 @@ class RAMAug(Dataset):
         augs_files=None,
         alb_transforms=A.Compose([]),
         aug_number=1,
-        target_dir="./dataset",
+        labels_path=".",
+        images_path=".",
         aug_batch_size=1024,
         aug_num_workers=1,
     ):
@@ -216,7 +218,8 @@ class RAMAug(Dataset):
         self.original_dataset, self.labels, self.aug_datasets = create_dataset_arrays(
             alb_transforms=alb_transforms,
             aug_number=aug_number,
-            target_dir=target_dir,
+            labels_path=labels_path,
+            images_path=images_path,
             batch_size=aug_batch_size,
             num_workers=aug_num_workers,
         )

@@ -12,52 +12,56 @@ from loss import IID_loss
 from model import IIC_train
 
 import os
+import json
+
+from utils import load_config
+
+
 
 os.environ["NO_ALBUMENTATIONS_UPDATE"]='1'
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run clustering model training with configurable parameters.")
-    parser.add_argument("-epochs", type=int, default=50, help="number of epochs")
-    parser.add_argument("-batch_size", type=int, default=256, help="Batch size for training")
-    parser.add_argument("-aug_number", type=int, default=10, help="Number of augmentations")
-    parser.add_argument("-aug_batch_size", type=int, default=256, help="Batch size for augmentation")
-    parser.add_argument("-overcluster_period", type=int, default=20, help="Period for overclustering")
-    parser.add_argument("-overcluster_ratio", type=float, default=0.5, help="Ratio for overclustering")
-    parser.add_argument("-dataset_path", type=str, help="Path to dataset.zip")
-    parser.add_argument("-icdar", type=bool, help="choose icdar dataset", default=False)
+    parser.add_argument('--config', type=str, required=True, help='path to configuration file')
     return parser.parse_args()
 
 def main():
     args = parse_args()
-    dataset_path = args.dataset_path
+    cfg = load_config(args.config)
+
+    EPOCHS = cfg['epochs']
+    BATCH_SIZE = cfg['batch_size']
+    AUG_NUMBER = cfg['aug_number']
+    AUG_BATCH_SIZE = cfg['aug_batch_size']
+    OVERCLUSTER_PERIOD = cfg['overcluster_period']
+    OVERCLUSTER_RATIO = cfg['overcluster_ratio']
+    LABELS_PATH = cfg['labels_path']
+    IMAGES_PATH = cfg['images_path']
+    AUG_NUM_WORKERS = cfg['aug_num_workers']
+    CLASS_NUM = cfg['class_num']
+
 
     if not os.path.exists('../last_train'):
         os.makedirs("../last_train")
 
-    if(args.icdar == False):
-    
-        extract_path = "dataset"
-        with zipfile.ZipFile(dataset_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_path)
 
-    if(args.icdar == True):
-        labels_path = f'{dataset_path}\\labels\\train.txt'
 
     dataset_np = RAMAug(
         alb_transforms=alb_transforms,
-        aug_number=args.aug_number,
-        target_dir=args.dataset_path,
-        aug_batch_size=args.aug_batch_size,
-        aug_num_workers=1,
+        aug_number=AUG_NUMBER,
+        labels_path=LABELS_PATH,
+        images_path=IMAGES_PATH,
+        aug_batch_size=AUG_BATCH_SIZE,
+        aug_num_workers=AUG_NUM_WORKERS,
     )
     
     dataset_train, dataset_val = stratified_split(dataset_np, train_size=0.95)
 
     dataloader_train = DataLoader(
-        dataset_train, batch_size=args.batch_size, shuffle=True, num_workers=1
+        dataset_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=1
     )
     dataloader_val = DataLoader(
-        dataset_val, batch_size=args.batch_size, shuffle=True, num_workers=1
+        dataset_val, batch_size=BATCH_SIZE, shuffle=True, num_workers=1
     )
 
     resnet = models.resnet18(pretrained=False)
@@ -75,13 +79,12 @@ def main():
     print("Batch shape:", batch.shape)
     print("Output shape:", backbone(batch).shape)
 
-    final_features = 393216
-    cluster_head = nn.Linear(final_features, 3)
-    overcluster_head = nn.Linear(final_features, 15)
+    final_features = backbone(batch).shape[-1]
+
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using %s." % device)
-    model = ResNetClusterisator()
+    model = ResNetClusterisator(class_num=cfg['class_num'], final_features=final_features)
     model.to(device)
     model.apply(weight_init)
     print("The model is transferred to %s." % device)
@@ -122,10 +125,10 @@ def main():
         dataloader_train,
         optimizer,
         device=device,
-        epochs=args.epochs,
+        epochs=EPOCHS,
         lamb=1.2,
-        overcluster_period=args.overcluster_period,
-        overcluster_ratio=args.overcluster_ratio,
+        overcluster_period=OVERCLUSTER_PERIOD,
+        overcluster_ratio=OVERCLUSTER_RATIO,
     )
 
 if __name__ == "__main__":
