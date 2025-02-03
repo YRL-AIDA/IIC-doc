@@ -15,7 +15,7 @@ class ResNetClusterisator(nn.Module):
     def __init__(self, class_num, final_features):
         super(ResNetClusterisator, self).__init__()
         self.class_num = class_num
-        self.final_features = final_features # число выходов, посчитанное заранее
+        self.final_features = final_features 
 
         resnet = models.resnet18(pretrained=False)
         modules = list(resnet.children())[:-2]
@@ -148,11 +148,10 @@ def IIC_train(
 
             # Запись средней потери за эпоху в файл
             log_file.write(f"epoch#{epoch + 1} -- loss = {avg_loss:.6f}\n")
-            log_file.flush()  # Немедленно записываем данные в файл
+            log_file.flush() 
 
             if (epoch + 1) % eval_every == 0:
 
-                # Computing eval losses
                 loss_eval = evaluate(
                     model, dataloader, overclustering=False, lamb=lamb, device=device
                 )
@@ -165,9 +164,6 @@ def IIC_train(
                 epochs_list.append(epoch)
 
             
-
-
-            # Сохранение модели при улучшении наилучшей потери
             if avg_loss < best_cluster_loss:
                 best_cluster_loss = avg_loss
                 torch.save(model.state_dict(), "../last_train/best_loss_model")

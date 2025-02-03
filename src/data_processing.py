@@ -32,6 +32,7 @@ class AlbDataset(Dataset):
     def _scan_directory(self):
         labels = self.labels_path
         files = open(labels, 'r').readlines()
+        print("Scanning directory...", end=" ")
         for file in files:
             row = file.split(" ") 
             img_path = row[0]
@@ -39,9 +40,9 @@ class AlbDataset(Dataset):
 
             self.labels.append(int(label))
             
-            self.image_files.append(self.images_path+img_path)
-            
-            print(self.images_path+'img_path')
+            self.image_files.append(os.path.join(self.images_path, img_path))
+        print("Done!")
+        
 
 
     def set_transforms(self, transforms):

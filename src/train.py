@@ -16,8 +16,6 @@ import json
 
 from utils import load_config
 
-
-
 os.environ["NO_ALBUMENTATIONS_UPDATE"]='1'
 
 def parse_args():
@@ -84,7 +82,7 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using %s." % device)
-    model = ResNetClusterisator(class_num=cfg['class_num'], final_features=final_features)
+    model = ResNetClusterisator(class_num=CLASS_NUM, final_features=final_features)
     model.to(device)
     model.apply(weight_init)
     print("The model is transferred to %s." % device)
@@ -109,8 +107,8 @@ def main():
     outputs = model(inputs, overclustering)
     outputs_tf = model(inputs_tf, overclustering)
     loss = IID_loss(outputs, outputs_tf, lamb=lamb)
-    #print(loss.data.cpu().numpy())
-    #loss.backward()
+    print(loss.data.cpu().numpy())
+    loss.backward()
 
     optimizer = torch.optim.Adam(
         model.parameters(),
