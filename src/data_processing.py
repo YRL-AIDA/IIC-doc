@@ -34,40 +34,53 @@ class AlbDataset(Dataset):
     def _scan_directory(self):
         with open(self.labels_path, 'r') as f:
             lines = f.readlines()
-        print("Scanning directory...", end=" ")
-        for file in lines:
-            row = file.strip().split(" ")
-            img_path = row[0]
-            label = row[1]
-            self.labels.append(int(label))
-            self.image_files.append(os.path.join(self.images_path, img_path))
-        print("Done!")
+        
+        self.image_files = [None] * len(lines)
+        self.labels = [None] * len(lines)
+        
+        for i, line in enumerate(lines):
+            img_path, label = line.strip().split()
+            self.image_files[i] = os.path.join(self.images_path, img_path)
+            self.labels[i] = int(label)
 
     def __len__(self):
         return len(self.image_files)
 
     def __getitem__(self, idx):
-        image_path = self.image_files[idx]
-        # Если формат изображения поддерживается cv2, используем его:
-        image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        if not hasattr(self, '_image_cache'):
+            self._image_cache = [None] * len(self)
+            
+        image = self._image_cache[idx]
+        
         if image is None:
-            raise ValueError(f"Не удалось прочитать изображение: {image_path}")
-
-        # OpenCV использует порядок (ширина, высота)
-        resized_image = cv2.resize(image, (750, 1000))  # (width, height)
-        resized_image = resized_image.astype(np.float32)
-        if resized_image.max() > 1.0:
-            resized_image /= 255.0
-
+            image = cv2.imread(self.image_files[idx], cv2.IMREAD_UNCHANGED)
+            if image is None:
+                raise ValueError(f"Не удалось прочитать изображение: {self.image_files[idx]}")
+            
+            self._image_cache[idx] = image
+            
+        if image.shape != (1000, 750):
+            image = cv2.resize(image, (750, 1000), interpolation=cv2.INTER_AREA)
+            
+        image = image.astype(np.float32)
+        if image.max() > 1.0:
+            image /= 255.0
+            
         label = self.labels[idx]
-        # Если требуется преобразование albumentations:
+        
         if self.alb_transforms is not None:
-            transformed = self.alb_transforms(image=resized_image)
+            transformed = self.alb_transforms(image=image)
             image_aug = transformed["image"]
-            return {"original": resized_image, "augmented": image_aug, "label": label}
-        else:
-            return {"original": resized_image, "label": label}
-
+            return {
+                "original": image,
+                "augmented": image_aug,
+                "label": label
+            }
+            
+        return {
+            "original": image,
+            "label": label
+        }
     
 def stratified_split(original_dataset, train_size, label_key="label"):
     """
@@ -263,7 +276,6 @@ class RAMAug(Dataset):
         original_image = np.array(
             self.original_dataset[idx: idx + 1, :, :], copy=True, dtype=np.float32
         )
-        #print("or_img: ", original_image.transpose(0,3,1,2).shape)
 
         label = np.array(self.labels[idx], copy=True, dtype=np.float32)
 
@@ -276,7 +288,6 @@ class RAMAug(Dataset):
                 copy=True,
                 dtype=np.float32,
             )
-            #print("aug_img: ", aug_image.transpose(0,3,1,2).squeeze().shape)
             return_dict["aug"] = aug_image
 
         return return_dict
@@ -310,7 +321,6 @@ def compose_array_from_dataloader(dataloader, key="original"):
     batch_list = []
     with tqdm(total=len(dataloader)) as pbar:
         for batch in dataloader:
-            # Используем .numpy() только один раз для каждого батча
             batch_data = batch[key].numpy()
             batch_list.append(batch_data)
             pbar.update(1)
