@@ -1,5 +1,5 @@
 {
-  "epochs": 50,
+  "epochs": 5,
   "batch_size": 2,
   "aug_number": 1,
   "aug_batch_size": 16,

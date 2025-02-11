@@ -20,6 +20,8 @@ alb_transforms = A.Compose(
 
 
 
+import cv2
+
 class AlbDataset(Dataset):
     def __init__(self, labels_path, images_path, alb_transforms=None):
         self.labels_path = labels_path
@@ -30,46 +32,42 @@ class AlbDataset(Dataset):
         self._scan_directory()
 
     def _scan_directory(self):
-        labels = self.labels_path
-        files = open(labels, 'r').readlines()
+        with open(self.labels_path, 'r') as f:
+            lines = f.readlines()
         print("Scanning directory...", end=" ")
-        for file in files:
-            row = file.split(" ") 
+        for file in lines:
+            row = file.strip().split(" ")
             img_path = row[0]
             label = row[1]
-
             self.labels.append(int(label))
-            
             self.image_files.append(os.path.join(self.images_path, img_path))
         print("Done!")
-        
-
-
-    def set_transforms(self, transforms):
-        self.alb_transforms = transforms
 
     def __len__(self):
         return len(self.image_files)
 
     def __getitem__(self, idx):
         image_path = self.image_files[idx]
-        image = tiff.imread(image_path)
+        # Если формат изображения поддерживается cv2, используем его:
+        image = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
+        if image is None:
+            raise ValueError(f"Не удалось прочитать изображение: {image_path}")
 
-        resized_image = transform.resize(image, (1000, 750))
-
-        resized_image = resized_image.astype(np.float32)  
-        if resized_image.max() > 1.0:  
-            resized_image = resized_image / 255.0
+        # OpenCV использует порядок (ширина, высота)
+        resized_image = cv2.resize(image, (750, 1000))  # (width, height)
+        resized_image = resized_image.astype(np.float32)
+        if resized_image.max() > 1.0:
+            resized_image /= 255.0
 
         label = self.labels[idx]
-
-        image_np = np.array(resized_image)
-
+        # Если требуется преобразование albumentations:
         if self.alb_transforms is not None:
-            image_alb = self.alb_transforms(image=image_np)["image"]
-            return {"original": image_np, "augmented": image_alb, "label": label}
+            transformed = self.alb_transforms(image=resized_image)
+            image_aug = transformed["image"]
+            return {"original": resized_image, "augmented": image_aug, "label": label}
         else:
-            return {"original": image_np, "label": label}
+            return {"original": resized_image, "label": label}
+
     
 def stratified_split(original_dataset, train_size, label_key="label"):
     """
@@ -140,30 +138,28 @@ class startifiedAgentDataset(Dataset):
 def create_dataset_arrays(
     alb_transforms=None, aug_number=1, labels_path='.', images_path='.', batch_size=256, num_workers=1
 ):
-
-
     dataset_alb = AlbDataset(labels_path=labels_path, images_path=images_path)
-    dataloader = DataLoader(
-        dataset_alb, batch_size=len(dataset_alb), shuffle=False, num_workers=num_workers
+    dataloader_full = DataLoader(
+        dataset_alb, batch_size=len(dataset_alb), shuffle=False, num_workers=num_workers, pin_memory=True
     )
-    print(np.array(dataloader).shape)
-
     print("Fetching original dataset...", end=" ")
-    originals_array = np.array(next(iter(dataloader))["original"])
-    labels_array = np.array(next(iter(dataloader))["label"])
+    full_batch = next(iter(dataloader_full))
+    originals_array = np.array(full_batch["original"])
+    labels_array = np.array(full_batch["label"])
     print("Done!")
 
-    dataset_alb.set_transforms(alb_transforms)
+    dataset_alb.alb_transforms = alb_transforms
     aug_arrays = []
-    dataloader = DataLoader(
-        dataset_alb, batch_size=batch_size, shuffle=False, num_workers=num_workers
+    dataloader_aug = DataLoader(
+        dataset_alb, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True
     )
 
     for aug_idx in range(aug_number):
         print("Making aug #%i" % aug_idx)
-        aug_arrays.append(compose_array_from_dataloader(dataloader, key="augmented"))
+        aug_arrays.append(compose_array_from_dataloader(dataloader_aug, key="augmented"))
 
     return originals_array, labels_array, aug_arrays
+
 
 class RAMAug(Dataset):
     """
@@ -311,24 +307,12 @@ def compose_array_from_dataloader(dataloader, key="original"):
 
     sample = dataloader.dataset[0][key]
 
-    if key == "label":
-        dtype = int
-        output_shape = [len(dataloader.dataset)]
-    else:
-        dtype = np.float32
-        output_shape = [len(dataloader.dataset)] + list(sample.shape)
-
-    output_array = np.zeros(output_shape, dtype=dtype)
-    output_array.setflags(write=True)
-    global_batch_size = dataloader.batch_size
-
+    batch_list = []
     with tqdm(total=len(dataloader)) as pbar:
-        for idx, batch in enumerate(dataloader):
-            array_to_add = batch[key].numpy()
-            batch_size = array_to_add.shape[0]
-            output_array[
-                global_batch_size * idx : global_batch_size * idx + batch_size
-            ] = array_to_add
+        for batch in dataloader:
+            # Используем .numpy() только один раз для каждого батча
+            batch_data = batch[key].numpy()
+            batch_list.append(batch_data)
             pbar.update(1)
-
+    output_array = np.concatenate(batch_list, axis=0)
     return output_array
