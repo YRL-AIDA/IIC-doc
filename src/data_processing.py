@@ -261,11 +261,11 @@ class RAMAug(Dataset):
         type(idx)
 
         original_image = np.array(
-            self.original_dataset[idx: idx + 1, :, :], copy=True, dtype=np.float16
+            self.original_dataset[idx: idx + 1, :, :], copy=True, dtype=np.float32
         )
         #print("or_img: ", original_image.transpose(0,3,1,2).shape)
 
-        label = np.array(self.labels[idx], copy=True, dtype=np.float16)
+        label = np.array(self.labels[idx], copy=True, dtype=np.float32)
 
         return_dict = {"original": original_image, "label": label}
 
@@ -274,7 +274,7 @@ class RAMAug(Dataset):
             aug_image = np.array(
                 self.aug_datasets[aug_version][idx: idx+1, :, :],
                 copy=True,
-                dtype=np.float16,
+                dtype=np.float32,
             )
             #print("aug_img: ", aug_image.transpose(0,3,1,2).squeeze().shape)
             return_dict["aug"] = aug_image
