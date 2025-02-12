@@ -83,6 +83,11 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using %s." % device)
     model = ResNetClusterisator(class_num=CLASS_NUM, final_features=final_features)
+
+    if torch.cuda.device_count() > 1:
+        print(f"Using {torch.cuda.device_count()} GPUs!")
+        model = nn.DataParallel(model)
+    
     model.to(device)
     model.apply(weight_init)
     print("The model is transferred to %s." % device)

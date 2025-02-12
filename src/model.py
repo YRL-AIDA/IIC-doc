@@ -100,14 +100,11 @@ def IIC_train(
     overcluster_period=20,
     overcluster_ratio=0.5,
 ):
-    """Цикл обучения IIC"""
     epochs_list = []
     loss_history = []
     loss_history_overclustering = []
-
     best_cluster_loss = float("inf")
 
-    # Открываем файл для записи истории обучения
     with open("../last_train/train.txt", "w") as log_file:
         for epoch in range(epochs):
             model.train()
@@ -115,14 +112,11 @@ def IIC_train(
                 epoch, overcluster_period, overcluster_ratio
             )
 
-            # Прогресс-бар для текущей эпохи
             pbar = tqdm(total=len(dataloader), leave=True, desc=f"epoch#{epoch + 1}")
             epoch_loss = 0
 
             for i, batch in enumerate(dataloader):
                 optimizer.zero_grad()
-
-                # Прямой проход
                 inputs = batch["original"].to(device=device)
                 inputs_tf = batch["aug"].to(device=device)
 
@@ -130,44 +124,34 @@ def IIC_train(
                 outputs_tf = model(inputs_tf, overclustering)
                 loss = IID_loss(outputs, outputs_tf, lamb=lamb)
 
-                # Обратный проход
                 loss.backward()
-
-                # Обновление весов
                 optimizer.step()
-
-                # Суммируем потери в эпохе
                 epoch_loss += loss.item()
-
-                # Обновляем прогресс-бар текущим значением loss
                 pbar.set_postfix(loss=f"{loss.item():.6f}")
                 pbar.update(1)
 
-            # Средние потери по эпохе
             avg_loss = epoch_loss / len(dataloader)
-
-            # Запись средней потери за эпоху в файл
             log_file.write(f"epoch#{epoch + 1} -- loss = {avg_loss:.6f}\n")
             log_file.flush() 
 
             if (epoch + 1) % eval_every == 0:
-
                 loss_eval = evaluate(
                     model, dataloader, overclustering=False, lamb=lamb, device=device
                 )
                 loss_eval_overclustering = evaluate(
                     model, dataloader, overclustering=True, lamb=lamb, device=device
                 )
-
                 loss_history.append(loss_eval)
                 loss_history_overclustering.append(loss_eval_overclustering)
                 epochs_list.append(epoch)
-
             
+            # Сохранение модели с учетом DataParallel
             if avg_loss < best_cluster_loss:
                 best_cluster_loss = avg_loss
-                torch.save(model.state_dict(), "../last_train/best_loss_model")
+                if isinstance(model, nn.DataParallel):
+                    torch.save(model.module.state_dict(), "../last_train/best_loss_model")
+                else:
+                    torch.save(model.state_dict(), "../last_train/best_loss_model")
 
             print_while_trainig(epochs_list, loss_history, loss_history_overclustering, save_to_jpg=True)
-
             pbar.close()
