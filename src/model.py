@@ -155,3 +155,4 @@ def IIC_train(
 
             print_while_trainig(epochs_list, loss_history, loss_history_overclustering, save_to_jpg=True)
             pbar.close()
+            

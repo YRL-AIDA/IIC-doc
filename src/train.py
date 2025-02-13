@@ -58,9 +58,7 @@ def main():
     dataloader_train = DataLoader(
         dataset_train, batch_size=BATCH_SIZE, shuffle=True, num_workers=1
     )
-    dataloader_val = DataLoader(
-        dataset_val, batch_size=BATCH_SIZE, shuffle=True, num_workers=1
-    )
+
 
     resnet = models.resnet18(pretrained=False)
     modules_to_keep = list(resnet.children())[:-2]

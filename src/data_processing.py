@@ -82,7 +82,7 @@ class AlbDataset(Dataset):
             "label": label
         }
     
-def stratified_split(original_dataset, train_size, label_key="label"):
+def stratified_split(original_dataset, train_size=1, label_key="label"):
     """
     Разделяет датасет PyTorch на основе стратифицированного метода.
     Основан на функции sklearn.model_selection.train_test_split.
@@ -195,7 +195,7 @@ class RAMAug(Dataset):
         self,
         augs_files=None,
         alb_transforms=A.Compose([]),
-        aug_number=1,
+        aug_number=0,
         labels_path=".",
         images_path=".",
         aug_batch_size=1024,
