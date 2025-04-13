@@ -59,8 +59,9 @@ class AlbDataset(Dataset):
             
             self._image_cache[idx] = image
             
-        if image.shape != (1000, 750):
-            image = cv2.resize(image, (750, 1000), interpolation=cv2.INTER_AREA)
+        if image.shape != (224, 224):
+            image = cv2.resize(image, (224, 224), interpolation=cv2.INTER_AREA)
+            
             
         image = image.astype(np.float32)
         if image.max() > 1.0:

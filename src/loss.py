@@ -1,75 +1,42 @@
 import torch
 import sys
 import numpy as np
-def compute_joint(x_out, x_tf_out):
-    """Оценивает совместное распределение вероятностей.
-
-    Параметры
-    ----------
-    x_out : torch.tensor
-        Форма (B, C), где B — размер батча, C — количество классов.
-        Вероятности для исходного батча.
-    x_out_tf : torch.tensor
-        Та же форма, что и x_out.
-        Вероятности для трансформированного батча.
-
-    Возвращает
-    -------
-    p_i_j : torch.tensor
-        Форма (C, C), где C — количество классов (такое же, как в x_out).
-        Совместные вероятности.
-    """
-
-    p_i_j = x_out.unsqueeze(2) * x_tf_out.unsqueeze(1)  # bn, k, k
-
-    p_i_j = p_i_j.mean(dim=0)
-
-    p_i_j = (p_i_j + p_i_j.t()) / 2.0
-
-    return p_i_j
-
-
 def IID_loss(x_out, x_tf_out, lamb=1.0, EPS=sys.float_info.epsilon):
-    """Вычисляет потерю взаимной информации. Общий минус добавлен, поэтому потеря должна быть минимизирована.
+  # has had softmax applied
+  _, k = x_out.size()
+  p_i_j = compute_joint(x_out, x_tf_out)
+  assert (p_i_j.size() == (k, k))
 
-    Параметры
-    ----------
-    x_out : torch.tensor
-        Форма (B, C), где B — размер батча, C — количество классов.
-        Вероятности для исходного батча.
-    x_out_tf : torch.tensor
-        Та же форма, что и x_out.
-        Вероятности для трансформированного батча.
-    lambd : float
-        Параметр, модифицирующий потерю.
-        Больший lambd обычно побуждает модель к размещению
-        выборок в различные кластеры равного размера.
-        Меньший lambd побуждает модель к размещению похожих изображений в один кластер.
-    EPS : float
-        Параметр для регуляризации малых вероятностей.
+  p_i = p_i_j.sum(dim=1).view(k, 1).expand(k, k)
+  p_j = p_i_j.sum(dim=0).view(1, k).expand(k,
+                                           k)  # but should be same, symmetric
 
-    Возвращает
-    -------
-    loss : torch.tensor
-        shape (1,). Потеря взаимной информации.
-    """
+  # avoid NaN losses. Effect will get cancelled out by p_i_j tiny anyway
+  p_i_j = torch.clamp(p_i_j, min=EPS)
+  p_j = torch.clamp(p_j, min=EPS)
+  p_i = torch.clamp(p_i, min=EPS)
 
-    _, num_classes = x_out.size()
+  loss = - p_i_j * (torch.log(p_i_j) \
+                    - lamb * torch.log(p_j) \
+                    - lamb * torch.log(p_i))
 
-    p_i_j = compute_joint(x_out, x_tf_out)
-    assert p_i_j.size() == (num_classes, num_classes)
+  loss = loss.sum()
 
-    mask = ((p_i_j > EPS).data).type(torch.float32)
-    p_i_j = p_i_j * mask + EPS * (1 - mask)
+  return loss
 
-    p_i = p_i_j.sum(dim=1).view(num_classes, 1).expand(num_classes, num_classes)
-    p_j = p_i_j.sum(dim=0).view(1, num_classes).expand(num_classes, num_classes)
 
-    loss = -p_i_j * (torch.log(p_i_j) - lamb * torch.log(p_j) - lamb * torch.log(p_i))
+def compute_joint(x_out, x_tf_out):
+  # produces variable that requires grad (since args require grad)
 
-    loss = torch.sum(loss)
+  bn, k = x_out.size()
+  assert (x_tf_out.size(0) == bn and x_tf_out.size(1) == k)
 
-    return loss
+  p_i_j = x_out.unsqueeze(2) * x_tf_out.unsqueeze(1)  # bn, k, k
+  p_i_j = p_i_j.sum(dim=0)  # k, k
+  p_i_j = (p_i_j + p_i_j.t()) / 2.  # symmetrise
+  p_i_j = p_i_j / p_i_j.sum()  # normalise
+
+  return p_i_j
 
 
 def evaluate(
@@ -94,7 +61,8 @@ def evaluate(
             outputs_tf = model(inputs_tf, overclustering)
 
         loss = IID_loss(outputs, outputs_tf, lamb=lamb)
-
+        
         losses.append(loss.data.cpu().numpy())
 
+        #print(losses)
     return np.mean(losses)
