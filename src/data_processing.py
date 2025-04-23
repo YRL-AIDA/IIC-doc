@@ -9,14 +9,12 @@ from tqdm import tqdm
 from skimage import transform
 import tifffile as tiff
 
-alb_transforms = A.Compose(
-    [
-        A.Perspective(scale=(0.01, 0.03), p=0.7),  
-        A.Superpixels(p_replace=(0, 0.03), p=0.7),  
-        A.GaussNoise(var_limit=(0.02 * 255, 0.05 * 255), p=0.7),  
-        A.RandomBrightnessContrast(brightness_limit=0.02, contrast_limit=0.02, p=0.7),
-    ]
-)
+alb_transforms = A.Compose([
+    A.Perspective(scale=(0.01, 0.03), p=0.7),
+    A.Superpixels(p_replace=(0, 0.01), p=0.7),
+    A.GaussNoise(var_limit=(0.002 * 255, 0.05 * 255), p=0.7),
+    A.RandomBrightnessContrast(brightness_limit=0.02, contrast_limit=0.02, p=0.7),
+])
 
 
 
